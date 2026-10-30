@@ -1,0 +1,104 @@
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Primary navigation">
+    <a class="brand" href="#top" aria-label="Penny expense tracker home"><span class="brand-mark">P</span><span>Penny</span></a>
+    <nav>
+      <a class="nav-item active" href="#overview" aria-current="page"><span class="nav-icon" aria-hidden="true">⌂</span><span>Overview</span></a>
+      <a class="nav-item" href="#transactions"><span class="nav-icon" aria-hidden="true">≡</span><span>Transactions</span></a>
+      <a class="nav-item" href="#add-expense"><span class="nav-icon" aria-hidden="true">+</span><span>Add expense</span></a>
+    </nav>
+    <div class="sidebar-profile"><span class="avatar">JD</span><div><strong>Jordan Davis</strong><small>Personal account</small></div></div>
+  </aside>
+
+  <main class="main-content" id="top">
+    <header class="topbar">
+      <label class="dashboard-search">
+        <span aria-hidden="true">⌕</span>
+        <span class="sr-only">Search dashboard</span>
+        <input type="search" placeholder="Search" />
+      </label>
+      <div class="topbar-actions">
+        <button class="add-money-button" type="button" (click)="scrollToExpenseForm()">+ Add expense</button>
+        <button class="notification-button" type="button" aria-label="Notifications">⌁</button>
+        <span class="avatar header-avatar">JD</span>
+      </div>
+    </header>
+    <div class="dashboard-title-row"><div><p class="eyebrow">Personal finance</p><h1>Expense overview</h1></div><div class="header-date">{{ formatDate(today()) }}</div></div>
+
+    <section class="summary-grid" id="overview" aria-label="Expense summary">
+      <article class="summary-card total-card">
+        <div class="summary-card-top"><span class="summary-icon">$</span><span class="trend">All time</span></div>
+        <p>Total expenses</p><strong>{{ formatCurrency(total()) }}</strong>
+      </article>
+      <article class="summary-card"><div class="summary-card-top"><span class="summary-icon blue">#</span></div><p>Transactions</p><strong>{{ expenses().length }}</strong></article>
+      <article class="summary-card"><div class="summary-card-top"><span class="summary-icon amber">~</span></div><p>Average expense</p><strong>{{ formatCurrency(average()) }}</strong></article>
+      <article class="summary-card"><div class="summary-card-top"><span class="summary-icon cyan">↑</span></div><p>Largest expense</p><strong>{{ formatCurrency(largestExpense()) }}</strong></article>
+    </section>
+
+    <section class="insights-grid" aria-label="Expense insights">
+      <article class="panel statistics-panel">
+        <div class="panel-header"><div><p class="section-kicker">Breakdown</p><h2>Spending statistics</h2></div><span class="record-count">By category</span></div>
+        <div class="stat-bars">
+          @for (item of categoryTotals(); track item.category) {
+            <div class="stat-row">
+              <div class="stat-label"><span>{{ item.category }}</span><strong>{{ formatCurrency(item.total) }}</strong></div>
+              <div class="stat-track"><span [style.width.%]="categoryBarWidth(item.total)"></span></div>
+            </div>
+          }
+          @if (!expenses().length) { <p class="insight-empty">Add an expense to see your spending breakdown.</p> }
+        </div>
+      </article>
+
+      <article class="panel activity-panel">
+        <div class="panel-header"><div><p class="section-kicker">Updates</p><h2>Recent activities</h2></div></div>
+        <div class="activity-list">
+          @for (expense of recentExpenses(); track expense.id) {
+            <div class="activity-item">
+              <span class="activity-icon">{{ getInitials(expense.category) }}</span>
+              <div><strong>{{ expense.title }}</strong><span>{{ expense.category }} · {{ formatDate(expense.date) }}</span></div>
+              <b>{{ formatCurrency(expense.amount) }}</b>
+            </div>
+          }
+          @if (!expenses().length) { <p class="insight-empty">Recent expense activity will appear here.</p> }
+        </div>
+      </article>
+    </section>
+
+    <div class="workspace-grid">
+      <section class="panel transactions-panel" id="transactions">
+        <div class="panel-header"><div><p class="section-kicker">Activity</p><h2>Recent transactions</h2></div><span class="record-count">{{ filteredExpenses().length }} records</span></div>
+        <div class="filters">
+          <label class="search-field"><span aria-hidden="true">⌕</span><span class="sr-only">Search expenses</span><input type="search" placeholder="Search expenses" [ngModel]="search()" (ngModelChange)="search.set($event)" /></label>
+          <label class="select-wrap"><span class="sr-only">Filter by category</span><select [ngModel]="categoryFilter()" (ngModelChange)="categoryFilter.set($event)"><option>All</option>@for (category of categories; track category) {<option [value]="category">{{ category }}</option>}</select></label>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Expense</th><th>Category</th><th>Date</th><th class="amount-heading">Amount</th><th><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>
+              @for (expense of filteredExpenses(); track expense.id) {
+                <tr>
+                  <td><div class="expense-name"><span class="category-avatar category-{{ expense.category.toLowerCase() }}">{{ getInitials(expense.category) }}</span><strong>{{ expense.title }}</strong></div></td>
+                  <td><span class="category-tag">{{ expense.category }}</span></td>
+                  <td>{{ formatDate(expense.date) }}</td>
+                  <td class="expense-amount">{{ formatCurrency(expense.amount) }}</td>
+                  <td><button class="delete-button" type="button" title="Delete expense" (click)="deleteExpense(expense.id)" [attr.aria-label]="'Delete ' + expense.title"><span aria-hidden="true">×</span></button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (!filteredExpenses().length) {<div class="empty-state"><span class="empty-icon">$</span><strong>No expenses found</strong><p>Add a transaction or change your filters.</p></div>}
+        </div>
+      </section>
+
+      <section class="panel form-panel" id="add-expense">
+        <div class="panel-header compact"><div><p class="section-kicker">New entry</p><h2>Add expense</h2></div></div>
+        <form [formGroup]="expenseForm" (ngSubmit)="addExpense()" novalidate>
+          <label><span>Title</span><input type="text" formControlName="title" placeholder="e.g. Grocery run" />@if (expenseForm.controls.title.touched && expenseForm.controls.title.invalid) {<small class="field-error">Enter a title.</small>}</label>
+          <label><span>Amount</span><div class="amount-input"><span>$</span><input type="number" min="0.01" step="0.01" formControlName="amount" placeholder="0.00" /></div>@if (expenseForm.controls.amount.touched && expenseForm.controls.amount.invalid) {<small class="field-error">Enter an amount above $0.</small>}</label>
+          <label><span>Category</span><select formControlName="category">@for (category of categories; track category) {<option [value]="category">{{ category }}</option>}</select></label>
+          <label><span>Date</span><input type="date" formControlName="date" /></label>
+          <button class="submit-button" type="submit">Add expense <span aria-hidden="true">→</span></button>
+        </form>
+      </section>
+    </div>
+  </main>
+</div>
